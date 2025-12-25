@@ -1,7 +1,8 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import QueryProvider from "@/component/QueryProvider";
+import QueryProvider from "../component/QueryProvider";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,6 +28,7 @@ export default function RootLayout({ children }) {
         <ClerkProvider>
           <QueryProvider>{children}</QueryProvider>
         </ClerkProvider>
+        <Toaster />
       </body>
     </html>
   );

@@ -1,6 +1,4 @@
-import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import HomeLogin from "@/component/HomeLogin";
+import HomeLogin from "../component/HomeLogin";
 
 export default function Home() {
   return (

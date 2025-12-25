@@ -6,10 +6,15 @@ export default clerkMiddleware(async (auth, request) => {
   const { userId } = await auth();
   const { pathname } = request.nextUrl;
 
-  // If user is signed in and on home page, redirect to dashboard
-  if (userId && pathname === "/") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  // Allow API routes to be accessed (they handle their own auth)
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
   }
+
+  // If user is signed in and on home page, redirect to dashboard
+  // if (userId && pathname === "/") {
+  //   return NextResponse.redirect(new URL("/dashboard", request.url));
+  // }
 
   // If user is not signed in and trying to access any page except home, redirect to home
   if (!userId && pathname !== "/") {

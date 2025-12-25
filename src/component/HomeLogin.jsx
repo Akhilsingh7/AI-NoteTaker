@@ -13,7 +13,8 @@ import {
 import { useRouter } from "next/navigation";
 
 function HomeLogin() {
-  const { isSignedIn } = useAuth();
+  const { userId, isSignedIn } = useAuth();
+  // console.log("user is", userId);
   const router = useRouter();
   return (
     <div className="flex gap-4 items-center">
