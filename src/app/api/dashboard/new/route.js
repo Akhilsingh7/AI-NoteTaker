@@ -20,13 +20,21 @@ export async function POST(request) {
 
     console.log(data);
     // console.log(data);
-    // const note = await Note.create({
-    //   title: data.todo,
-    //   userId: user.id,
-    // });
+    const note = await Note.create({
+      title: data.note.title,
+      content: data.note.content,
+      userId: data.note.userId,
+    });
+
+    if (!note) {
+      return NextResponse.json(
+        { success: false, message: "Error in adding new note" },
+        { status: 401 }
+      );
+    }
 
     // console.log(note);
-    return NextResponse.json({ success: true }, { status: 201 });
+    return NextResponse.json({ success: true }, { data: note, status: 201 });
   } catch (error) {
     return NextResponse.json(
       { success: false, error: error.message },

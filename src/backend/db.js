@@ -1,6 +1,6 @@
-import mongoose, { mongo } from "mongoose";
+import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URL;
+const MONGODB_URI = process.env.MONGODB_URL || process.env.MONGODB_URI;
 
 let isConnected = false;
 
@@ -10,6 +10,12 @@ async function dbConnect() {
     return;
   }
 
+  if (!MONGODB_URI) {
+    throw new Error(
+      "Please define the MONGODB_URL environment variable inside .env"
+    );
+  }
+
   try {
     const db = await mongoose.connect(MONGODB_URI);
     isConnected = db.connections[0].readyState === 1;
@@ -17,6 +23,7 @@ async function dbConnect() {
     console.log("Connected to Mongodb");
   } catch (error) {
     console.log("error in connecting database ", error);
+    isConnected = false;
     throw error;
   }
 }

@@ -17,7 +17,14 @@ function Navbar() {
         </div>
 
         {/* Right - Logout Button */}
-        <div>
+        <div className="flex gap-2">
+          <Button
+            size="default"
+            className="bg-blue-600 hover:bg-blue-700"
+            onClick={() => router.push("/dashboard")}
+          >
+            Dashboard
+          </Button>
           <SignOutButton redirectUrl="/">
             <Button variant="outline" size="default">
               Logout
