@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Router from "next/router";
 import { format } from "date-fns";
+import Link from "next/link";
 
 // Sample notes data - replace with actual data later
 const notes = [
@@ -67,24 +68,30 @@ function Dashboard() {
         {/* Notes List */}
         <div className="space-y-4">
           {data?.data?.map((note) => (
-            <Card
+            <Link
+              href={`/dashboard/note/${note._id}`}
+              className="block"
               key={note._id}
-              className="p-6 hover:shadow-md transition-shadow cursor-pointer bg-white"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    {note.title}
-                  </h3>
-                  <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">
-                    {note.content}
-                  </p>
+              <Card
+                key={note._id}
+                className="p-6 hover:shadow-md transition-shadow cursor-pointer bg-white"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      {note.title}
+                    </h3>
+                    <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">
+                      {note.content}
+                    </p>
+                  </div>
+                  <span className="text-sm text-gray-400 ml-4 whitespace-nowrap">
+                    {format(new Date(note.updatedAt), "dd MMM yyyy")}
+                  </span>
                 </div>
-                <span className="text-sm text-gray-400 ml-4 whitespace-nowrap">
-                  {format(new Date(note.updatedAt), "dd MMM yyyy")}
-                </span>
-              </div>
-            </Card>
+              </Card>
+            </Link>
           ))}
         </div>
       </div>
