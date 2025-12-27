@@ -7,31 +7,6 @@ import Router from "next/router";
 import { format } from "date-fns";
 import Link from "next/link";
 
-// Sample notes data - replace with actual data later
-const notes = [
-  {
-    id: 1,
-    title: "React Hooks Overview",
-    preview:
-      "Let ing bounfra veiod the maliga from where you te creating your notes from degative a yet Premeselny.",
-    timestamp: "2 hours ago",
-  },
-  {
-    id: 2,
-    title: "Next.js Routing Tips",
-    preview:
-      "Next js bieous somse the mo eficy from the bauce of importence. React s from ontaoled and Contrarles.",
-    timestamp: "2 hours ago",
-  },
-  {
-    id: 3,
-    title: "API Best Practices",
-    preview:
-      "Daint the tomaveilon assail In chedy maga and ascrenings pooking from pinaties the times To implocations.",
-    timestamp: "2 hours ago",
-  },
-];
-
 function Dashboard() {
   const router = new useRouter();
   const queryClient = useQueryClient();

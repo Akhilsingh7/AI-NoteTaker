@@ -6,11 +6,13 @@ import { currentUser } from "@clerk/nextjs/server";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
 
-export async function PATCH(request, { params }) {
+export async function POST(request, { params }) {
   try {
     await dbConnect();
 
     const user = await currentUser();
+
+    const { question } = await request.json();
 
     if (!user) {
       return NextResponse.json(
@@ -40,13 +42,13 @@ export async function PATCH(request, { params }) {
 
     if (!note.content || note.content.trim() === "") {
       return NextResponse.json(
-        { success: false, message: "Note has no content to summarize" },
+        { success: false, message: "Note has no content to answer question" },
         { status: 400 }
       );
     }
 
-    // console.log("Calling Google Gemini API...");
-    // console.log("Content length:", note.content.length);
+    console.log("Calling Google Gemini API...");
+    console.log("Content length:", note.content.length);
 
     // const models = await genAI.listModels();
     // console.log(models);
@@ -54,40 +56,24 @@ export async function PATCH(request, { params }) {
     // Use Gemini Pro model
     const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
-    const result = await model.generateContent(
-      `Summarize the following note in 2-3 clear bullet points:\n\n${note.content}`
-    );
+    const prompt = `Based on this note:\n\n${note.content}\n\nAnswer this question: ${question}`;
 
-    const summary = result.response.text();
-    console.log("Summary generated successfully");
+    const result = await model.generateContent(prompt);
 
-    if (!summary) {
+    const answer = result.response.text();
+    console.log("Answer generated successfully");
+
+    if (!answer) {
       return NextResponse.json(
-        { success: false, message: "Failed to generate summary" },
+        { success: false, message: "Failed to answer question" },
         { status: 500 }
       );
     }
 
-    console.log("Updating note in database...");
-    const updatedNote = await Note.findByIdAndUpdate(
-      id,
-      { summary, updatedAt: new Date() },
-      { new: true }
-    );
-
-    if (!updatedNote) {
-      return NextResponse.json(
-        { success: false, message: "Failed to update note" },
-        { status: 500 }
-      );
-    }
-
-    console.log("Note updated successfully");
     return NextResponse.json({
       success: true,
       data: {
-        id: updatedNote._id,
-        summary: updatedNote.summary,
+        answer: answer,
       },
     });
   } catch (error) {
