@@ -6,10 +6,12 @@ import { useRouter } from "next/navigation";
 import Router from "next/router";
 import { format } from "date-fns";
 import Link from "next/link";
+import { useAuth } from "@clerk/nextjs";
 
 function Dashboard() {
   const router = new useRouter();
   const queryClient = useQueryClient();
+  const { userId, isLoaded, isSignedIn } = useAuth();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["notes"],
@@ -23,8 +25,11 @@ function Dashboard() {
 
   console.log(data);
 
-  if (isLoading) return <p>Loading...</p>;
-  if (error) return <p>Error loading Notes</p>;
+  if (isLoading) return <p className="text-center py-8">Loading...</p>;
+  if (error)
+    return <p className="text-center py-8 text-red-600">Error loading Notes</p>;
+
+  console.log("user id is", userId);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -32,12 +37,21 @@ function Dashboard() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-gray-900">My Notes</h1>
-          <Button
-            className="bg-blue-600 hover:bg-blue-700"
-            onClick={() => router.push("/dashboard/new")}
-          >
-            New Note
-          </Button>
+
+          <div className="flex items-center justify-between gap-2">
+            <Link href={`/dashboard/assistant/${userId ?? ""}`}>
+              <Button variant="outline" size="default" disabled={!userId}>
+                🧠 ASSISTANT
+              </Button>
+            </Link>
+
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => router.push("/dashboard/new")}
+            >
+              New Note
+            </Button>
+          </div>
         </div>
 
         {/* Notes List */}

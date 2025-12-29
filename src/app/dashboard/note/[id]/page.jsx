@@ -13,6 +13,7 @@ function NoteDetail() {
 
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["note", id],
@@ -50,33 +51,63 @@ function NoteDetail() {
     },
   });
 
-  const questionMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`/api/ai/questions/${id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question }),
-      });
-      if (!res.ok) {
-        throw new Error("Failed to generate answer");
-      }
-      const data = await res.json();
-      if (!data.success) {
-        throw new Error(data.message || "Failed to get answer");
-      }
-      return data;
-    },
-    onSuccess: (data) => {
-      setAnswer(data.data?.answer);
-    },
-    onError: (error) => {
-      console.error(error);
-      toast.error("Failed to fetch anwser");
-    },
-  });
-  const handleAskQuestion = () => {
+  // const questionMutation = useMutation({
+  //   mutationFn: async () => {
+  //     const res = await fetch(`/api/ai/questions/${id}`, {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ question }),
+  //     });
+  //     if (!res.ok) {
+  //       throw new Error("Failed to generate answer");
+  //     }
+  //     const data = await res.json();
+  //     if (!data.success) {
+  //       throw new Error(data.message || "Failed to get answer");
+  //     }
+  //     return data;
+  //   },
+  //   onSuccess: (data) => {
+  //     setAnswer(data.data?.answer);
+  //   },
+  //   onError: (error) => {
+  //     console.error(error);
+  //     toast.error("Failed to fetch anwser");
+  //   },
+  // });
+
+  const handleAskQuestion = async () => {
     if (!question.trim()) return;
-    questionMutation.mutate();
+
+    setAnswer("");
+    setIsStreaming(true);
+
+    const res = await fetch(`/api/ai/questions/${id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question }),
+    });
+
+    if (!res.ok || !res.body) {
+      toast.error("Failed to fetch answer");
+      setIsStreaming(false);
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      fullText = fullText + chunk;
+      setAnswer(fullText); // UI updates live
+    }
+
+    setIsStreaming(false);
   };
 
   // Handler to save answer (placeholder)
@@ -191,15 +222,14 @@ function NoteDetail() {
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleAskQuestion()}
-                disabled={questionMutation.isPending}
                 className="flex-1"
               />
               <Button
                 onClick={handleAskQuestion}
-                disabled={!question.trim() || questionMutation.isPending}
+                disabled={isStreaming || !question.trim()}
                 className="bg-purple-600 hover:bg-purple-700"
               >
-                {questionMutation.isPending ? "Asking..." : "Ask"}
+                {isStreaming ? "Thinking..." : "Ask"}
               </Button>
             </div>
 
@@ -221,13 +251,13 @@ function NoteDetail() {
               </div>
             )}
 
-            {questionMutation.isError && (
+            {/* {questionMutation.isError && (
               <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-red-600 text-sm">
                   {questionMutation.error?.message || "Failed to get answer"}
                 </p>
               </div>
-            )}
+            )} */}
 
             {/* Placeholder when no answer */}
             {!answer && (

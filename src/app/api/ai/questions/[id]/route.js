@@ -54,26 +54,51 @@ export async function POST(request, { params }) {
     // console.log(models);
 
     // Use Gemini Pro model
-    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     const prompt = `Based on this note:\n\n${note.content}\n\nAnswer this question: ${question}`;
 
-    const result = await model.generateContent(prompt);
+    const stream = await model.generateContentStream(prompt);
 
-    const answer = result.response.text();
+    const encoder = new TextEncoder();
+
+    const readableStream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream.stream) {
+            const text = chunk.text();
+            if (text) {
+              controller.enqueue(encoder.encode(text));
+            }
+          }
+          controller.close(); // ✅ FIX: Close the stream!
+        } catch (error) {
+          controller.error(error); // ✅ Handle errors in stream
+        }
+      },
+    });
+
+    const answer = readableStream;
     console.log("Answer generated successfully");
 
-    if (!answer) {
-      return NextResponse.json(
-        { success: false, message: "Failed to answer question" },
-        { status: 500 }
-      );
-    }
+    // if (!answer) {
+    //   return NextResponse.json(
+    //     { success: false, message: "Failed to answer question" },
+    //     { status: 500 }
+    //   );
+    // }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        answer: answer,
+    // return NextResponse.json({
+    //   success: true,
+    //   data: {
+    //     answer: answer,
+    //   },
+    // });
+
+    return new Response(readableStream, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Transfer-Encoding": "chunked",
       },
     });
   } catch (error) {
