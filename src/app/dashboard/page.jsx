@@ -39,6 +39,12 @@ function Dashboard() {
           <h1 className="text-3xl font-bold text-gray-900">My Notes</h1>
 
           <div className="flex items-center justify-between gap-2">
+            <Link href={`/uploadPdf/${userId ?? ""}`}>
+              <Button variant="outline" size="default" disabled={!userId}>
+                ➜ Upload-Pdf
+              </Button>
+            </Link>
+
             <Link href={`/dashboard/assistant/${userId ?? ""}`}>
               <Button variant="outline" size="default" disabled={!userId}>
                 🧠 ASSISTANT
@@ -71,6 +77,11 @@ function Dashboard() {
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">
                       {note.title}
                     </h3>
+                    {note?.source === "pdf" && (
+                      <span className="text-xs px-2 py-0.5 rounded bg-gray-100">
+                        📄 PDF
+                      </span>
+                    )}
                     <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">
                       {note.content}
                     </p>

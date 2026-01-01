@@ -78,7 +78,7 @@ export async function POST(request, { params }) {
       },
     });
 
-    const answer = readableStream;
+    // const answer = readableStream;
     console.log("Answer generated successfully");
 
     // if (!answer) {

@@ -19,6 +19,11 @@ const NoteSchema = new mongoose.Schema(
     summary: {
       type: String,
     },
+    source: {
+      type: String,
+      enum: ["manual", "pdf"],
+      default: "manual",
+    },
   },
   {
     timestamps: true,

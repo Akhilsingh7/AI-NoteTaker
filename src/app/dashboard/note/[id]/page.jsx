@@ -76,38 +76,77 @@ function NoteDetail() {
   //   },
   // });
 
-  const handleAskQuestion = async () => {
+  const handleAskQuestion = async (source) => {
     if (!question.trim()) return;
 
     setAnswer("");
     setIsStreaming(true);
 
-    const res = await fetch(`/api/ai/questions/${id}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question }),
-    });
+    // if (source == "pdf") {
+    //   const res = await fetch(`/api/ai/questions/${id}`, {
+    //     method: "POST",
+    //     headers: { "Content-Type": "application/json" },
+    //     body: JSON.stringify({ question }),
+    //   });
+    // }
 
-    if (!res.ok || !res.body) {
-      toast.error("Failed to fetch answer");
+    try {
+      const noteType = source;
+
+      const endpoint =
+        noteType === "pdf"
+          ? `/api/ai/notes/askPdf/${id}`
+          : `/api/ai/questions/${id}`;
+
+      console.log(`Using ${noteType} endpoint:`, endpoint);
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        toast.error(errorData.error || "Failed to fetch answer");
+        setIsStreaming(false);
+        return;
+      }
+
+      if (noteType === "pdf") {
+        const data = await res.json();
+        setAnswer(data.answer);
+        setQuestion(""); // Clear question
+        toast.success("Answer generated!");
+      } else {
+        if (!res.body) {
+          toast.error("No response body");
+          setIsStreaming(false);
+          return;
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let fullText = "";
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          fullText += chunk;
+          setAnswer(fullText); // UI updates live
+        }
+
+        setQuestion(""); // Clear question
+        toast.success("Answer generated!");
+      }
+    } catch (error) {
+      console.error("Error asking question:", error);
+      toast.error("Failed to get answer");
+    } finally {
       setIsStreaming(false);
-      return;
     }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let fullText = "";
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      fullText = fullText + chunk;
-      setAnswer(fullText); // UI updates live
-    }
-
-    setIsStreaming(false);
   };
 
   // Handler to save answer (placeholder)
@@ -127,6 +166,12 @@ function NoteDetail() {
         <h1 className="text-4xl font-bold text-gray-900">
           {data?.data?.title}
         </h1>
+
+        {data?.data?.source === "pdf" && (
+          <span className="px-3 py-1 bg-red-100 text-red-700 text-sm font-semibold rounded-full">
+            PDF
+          </span>
+        )}
 
         {/* Content */}
         <div>
@@ -221,11 +266,13 @@ function NoteDetail() {
                 placeholder="Ask about this note..."
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleAskQuestion()}
+                onKeyPress={(e) =>
+                  e.key === "Enter" && handleAskQuestion(data?.data?.source)
+                }
                 className="flex-1"
               />
               <Button
-                onClick={handleAskQuestion}
+                onClick={() => handleAskQuestion(data?.data?.source)}
                 disabled={isStreaming || !question.trim()}
                 className="bg-purple-600 hover:bg-purple-700"
               >
