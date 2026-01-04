@@ -5,6 +5,7 @@ import Note from "../../../../../../backend/models/notes";
 import NoteChunk from "../../../../../../backend/models/NoteChunk";
 import OpenAI from "openai";
 import mongoose from "mongoose";
+import ConversationMemory from "../../../../../../backend/models/ConversationMemory";
 
 export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -81,6 +82,15 @@ export async function POST(req, { params }) {
       });
     }
 
+    const topScore = chunks[0]?.score ?? 0;
+
+    if (topScore < 0.2) {
+      return NextResponse.json({
+        answer:
+          "I don’t have enough information in this document to answer that",
+      });
+    }
+
     // Build context from chunks
     const context = chunks
       .map((c, i) => `[Chunk ${i + 1}]\n${c.text}`)
@@ -89,24 +99,68 @@ export async function POST(req, { params }) {
     // 3️⃣ Ask OpenAI with context
     console.log("💬 Generating answer with OpenAI...");
 
+    const memories = await ConversationMemory.find({
+      userId: user.id,
+      noteId: id,
+    })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean();
+
+    const memoryContext =
+      memories.length > 0
+        ? memories
+            .map(
+              (m, i) =>
+                `${i + 1}. User asked: "${m.question}" → AI answered: "${
+                  m.answer
+                }"`
+            )
+            .join("\n")
+        : "No prior conversation.";
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
           content:
-            "You are a helpful assistant. Answer questions based ONLY on the provided context. If the answer is not in the context, say 'I don't have enough information in this document to answer that question.'",
+            "You are a helpful assistant. Answer questions using the document context and prior conversation if relevant. If the answer is not present, say you don't have enough information.",
         },
         {
           role: "user",
-          content: `CONTEXT:\n${context}\n\nQUESTION:\n${question}`,
+          content: `
+      CONVERSATION MEMORY:
+      ${memoryContext}
+      
+      DOCUMENT CONTEXT:
+      ${context}
+      
+      QUESTION:
+      ${question}
+      `,
         },
       ],
+
       max_tokens: 500,
       temperature: 0.7,
     });
 
+    // const topScore = chunks[0]?.score ?? 0;
+
+    // if (topScore < 0.2) {
+    //   answer =
+    //     "I don’t have enough information in this document to answer that.";
+    // }
+
     const answer = completion.choices[0].message.content;
+
+    await ConversationMemory.create({
+      userId: user.id,
+      noteId: id,
+      question,
+      answer,
+    });
 
     console.log("✅ Answer generated successfully");
 
