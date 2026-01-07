@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import dbConnect from "../../../../../backend/db";
 import Note from "../../../../../backend/models/notes";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { currentUser } from "@clerk/nextjs/server";
+import { inngest } from "@/lib/inngest/client";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
 
-export async function PATCH(request, { params }) {
+export async function POST(request, { params }) {
   try {
     await dbConnect();
 
@@ -38,6 +39,10 @@ export async function PATCH(request, { params }) {
       );
     }
 
+    await Note.findByIdAndUpdate(id, {
+      summaryStatus: "processing",
+    });
+
     if (!note.content || note.content.trim() === "") {
       return NextResponse.json(
         { success: false, message: "Note has no content to summarize" },
@@ -45,50 +50,18 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    // console.log("Calling Google Gemini API...");
-    // console.log("Content length:", note.content.length);
+    await inngest.send({
+      name: "note/summarize.requested",
+      data: {
+        noteId: id,
+        userId: user.id,
+      },
+    });
 
-    // const models = await genAI.listModels();
-    // console.log(models);
-
-    // Use Gemini Pro model
-    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-
-    const result = await model.generateContent(
-      `Summarize the following note in 2-3 clear bullet points:\n\n${note.content}`
-    );
-
-    const summary = result.response.text();
-    console.log("Summary generated successfully");
-
-    if (!summary) {
-      return NextResponse.json(
-        { success: false, message: "Failed to generate summary" },
-        { status: 500 }
-      );
-    }
-
-    console.log("Updating note in database...");
-    const updatedNote = await Note.findByIdAndUpdate(
-      id,
-      { summary, updatedAt: new Date() },
-      { new: true }
-    );
-
-    if (!updatedNote) {
-      return NextResponse.json(
-        { success: false, message: "Failed to update note" },
-        { status: 500 }
-      );
-    }
-
-    console.log("Note updated successfully");
     return NextResponse.json({
       success: true,
-      data: {
-        id: updatedNote._id,
-        summary: updatedNote.summary,
-      },
+      message: "Summary generation started",
+      status: "processing",
     });
   } catch (error) {
     console.error("=== ERROR DETAILS ===");

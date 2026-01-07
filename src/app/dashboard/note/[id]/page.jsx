@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 function NoteDetail() {
@@ -14,6 +14,10 @@ function NoteDetail() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+
+  // NEW: State for summary polling
+  const [summaryStatus, setSummaryStatus] = useState("pending");
+  const [isPolling, setIsPolling] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["note", id],
@@ -26,10 +30,56 @@ function NoteDetail() {
     enabled: !!id,
   });
 
+  useEffect(() => {
+    if (data?.data?.summaryStatus) {
+      setSummaryStatus(data.data.summaryStatus);
+
+      // If status is "processing", start polling immediately
+      if (data.data.summaryStatus === "processing") {
+        setIsPolling(true);
+      }
+    }
+  }, [data?.data?.summaryStatus]);
+
+  const checkSummaryStatus = async () => {
+    try {
+      const res = await fetch(`/api/ai/summarize/${id}/summary-status`);
+      const statusData = await res.json();
+
+      if (statusData.success) {
+        setSummaryStatus(statusData.status);
+
+        // If completed or failed, stop polling and refetch note
+        if (
+          statusData.status === "completed" ||
+          statusData.status === "failed"
+        ) {
+          setIsPolling(false);
+          queryClient.invalidateQueries({ queryKey: ["note", id] });
+
+          if (statusData.status === "completed") {
+            toast.success("Summary generated successfully!");
+          } else {
+            toast.error("Summary generation failed. Please try again.");
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error checking summary status:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (isPolling && summaryStatus === "processing") {
+      const interval = setInterval(checkSummaryStatus, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [isPolling, summaryStatus, id]);
+
   const aiMutation = useMutation({
     mutationFn: async (noteId) => {
       const res = await fetch(`/api/ai/summarize/${noteId}`, {
-        method: "PATCH",
+        method: "POST",
       });
       if (!res.ok) {
         throw new Error("Failed to generate summary");
@@ -41,54 +91,20 @@ function NoteDetail() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["note", id],
-      });
-      toast.success("Summary generated successfully!");
+      setSummaryStatus("processing");
+      setIsPolling(true);
+      toast.success("Summary generation started!");
     },
     onError: (error) => {
       console.error(error.message);
     },
   });
 
-  // const questionMutation = useMutation({
-  //   mutationFn: async () => {
-  //     const res = await fetch(`/api/ai/questions/${id}`, {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({ question }),
-  //     });
-  //     if (!res.ok) {
-  //       throw new Error("Failed to generate answer");
-  //     }
-  //     const data = await res.json();
-  //     if (!data.success) {
-  //       throw new Error(data.message || "Failed to get answer");
-  //     }
-  //     return data;
-  //   },
-  //   onSuccess: (data) => {
-  //     setAnswer(data.data?.answer);
-  //   },
-  //   onError: (error) => {
-  //     console.error(error);
-  //     toast.error("Failed to fetch anwser");
-  //   },
-  // });
-
   const handleAskQuestion = async (source) => {
     if (!question.trim()) return;
 
     setAnswer("");
     setIsStreaming(true);
-
-    // if (source == "pdf") {
-    //   const res = await fetch(`/api/ai/questions/${id}`, {
-    //     method: "POST",
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify({ question }),
-    //   });
-    // }
 
     try {
       const noteType = source;
@@ -201,15 +217,22 @@ function NoteDetail() {
               </div>
               <h2 className="text-2xl font-bold text-gray-900">AI Summary</h2>
             </div>
+
+            {/* UPDATED: Button shows different states */}
             <Button
               onClick={() => aiMutation.mutate(id)}
-              disabled={aiMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700"
+              disabled={aiMutation.isPending || summaryStatus === "processing"}
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
             >
               {aiMutation.isPending ? (
                 <>
                   <span className="animate-spin mr-2">⚙️</span>
-                  Generating...
+                  Starting...
+                </>
+              ) : summaryStatus === "processing" ? (
+                <>
+                  <span className="animate-spin mr-2">⚙️</span>
+                  Processing...
                 </>
               ) : (
                 "Generate Summary"
@@ -218,7 +241,41 @@ function NoteDetail() {
           </div>
 
           <div className="bg-white rounded-lg p-6 border border-gray-200">
-            {data?.data?.summary ? (
+            {/* UPDATED: Show processing state */}
+            {summaryStatus === "processing" && (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+                <p className="text-gray-600 font-medium">
+                  Generating summary in background...
+                </p>
+                <p className="text-gray-400 text-sm mt-2">
+                  This may take up to 30 seconds. You can navigate away and come
+                  back.
+                </p>
+              </div>
+            )}
+
+            {/* UPDATED: Show failed state */}
+            {summaryStatus === "failed" && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                <p className="text-red-600 font-medium mb-2">
+                  Failed to generate summary
+                </p>
+                <p className="text-red-500 text-sm mb-4">
+                  Something went wrong. Please try again.
+                </p>
+                <Button
+                  onClick={() => aiMutation.mutate(id)}
+                  variant="outline"
+                  className="border-red-300 text-red-600 hover:bg-red-50"
+                >
+                  Retry
+                </Button>
+              </div>
+            )}
+
+            {/* UPDATED: Show completed summary */}
+            {summaryStatus === "completed" && data?.data?.summary ? (
               <>
                 <p className="text-gray-600 mb-4">
                   Here's the AI-generated summary of this note:
@@ -227,11 +284,11 @@ function NoteDetail() {
                   {data.data.summary}
                 </div>
               </>
-            ) : (
+            ) : summaryStatus === "pending" ? (
               <p className="text-gray-500 text-center">
                 No summary yet. Click "Generate Summary" to create one.
               </p>
-            )}
+            ) : null}
           </div>
         </Card>
 
