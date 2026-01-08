@@ -6,6 +6,8 @@ import NoteChunk from "../../../../../../backend/models/NoteChunk";
 import OpenAI from "openai";
 import mongoose from "mongoose";
 import ConversationMemory from "../../../../../../backend/models/ConversationMemory";
+import AiUsage from "../../../../../../backend/models/AiUsage";
+import { calculateCost, checkDailyLimit } from "@/lib/calcAiCost";
 
 export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -39,11 +41,50 @@ export async function POST(req, { params }) {
     console.log("📝 RAG Query for note:", note.title);
     console.log("❓ Question:", question);
 
+    const dailylimit = await checkDailyLimit(user.id);
+
+    if (dailylimit >= 1) {
+      return NextResponse.json(
+        { success: false, message: "Daily AI usage limit reached" },
+        { status: 429 }
+      );
+    }
+
+    const startTime1 = Date.now();
+
     // 1️⃣ Generate question embedding
     console.log("🧠 Generating question embedding...");
     const embeddingRes = await openai.embeddings.create({
       model: "text-embedding-3-small",
       input: question,
+    });
+
+    const latencyMs = Date.now() - startTime1;
+
+    const embeddingUsage = embeddingRes.usage || {};
+    const embeddingTokens = embeddingUsage.total_tokens || 0;
+
+    const embeddingCost = calculateCost({
+      model: "text-embedding-3-small",
+      promptTokens: embeddingTokens,
+    });
+
+    await AiUsage.create({
+      userId: user.id,
+      noteId: id,
+
+      feature: "pdf-question",
+      aiMode: "rag",
+      operation: "embedding",
+
+      model: "text-embedding-3-small",
+
+      promptToken: embeddingTokens,
+      completionToken: 0,
+      totalTokens: embeddingTokens,
+
+      costUSD: embeddingCost.totalCost,
+      latencyMs,
     });
 
     const questionEmbedding = embeddingRes.data[0].embedding;
@@ -119,6 +160,8 @@ export async function POST(req, { params }) {
             .join("\n")
         : "No prior conversation.";
 
+    const startTime2 = Date.now();
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -152,6 +195,37 @@ export async function POST(req, { params }) {
     //   answer =
     //     "I don’t have enough information in this document to answer that.";
     // }
+
+    const generationLatencyMs = Date.now() - startTime2;
+
+    const usage = completion.usage || {};
+
+    const promptTokens = usage.prompt_tokens || 0;
+    const completionTokens = usage.completion_tokens || 0;
+
+    const generationCost = calculateCost({
+      model: "gpt-4o-mini",
+      promptTokens,
+      completionTokens,
+    });
+
+    await AiUsage.create({
+      userId: user.id,
+      noteId: id,
+
+      feature: "pdf-question",
+      aiMode: "rag",
+      operation: "generation",
+
+      model: "gpt-4o-mini",
+
+      promptToken: promptTokens,
+      completionToken: completionTokens,
+      totalTokens: promptTokens + completionTokens,
+
+      costUSD: generationCost.totalCost,
+      latencyMs: generationLatencyMs,
+    });
 
     const answer = completion.choices[0].message.content;
 

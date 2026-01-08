@@ -6,6 +6,9 @@ import OpenAI from "openai";
 import NoteChunk from "../../backend/models/NoteChunk";
 import { chunkText } from "../chunkTest";
 import { extractText } from "unpdf";
+import AiUsage from "../../backend/models/AiUsage";
+import { calculateCost, checkDailyLimit } from "../calcAiCost";
+import { use } from "react";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
 const openai = new OpenAI({
@@ -24,6 +27,13 @@ export const summarizeNote = inngest.createFunction(
 
     try {
       // Step 1: Fetch the note
+
+      const dailylimit = await checkDailyLimit(userId);
+
+      if (dailylimit >= 1) {
+        throw new Error("Daily limit reached ");
+      }
+
       const note = await step.run("fetch-note", async () => {
         await dbConnect();
         const fetchedNote = await Note.findById(noteId);
@@ -40,6 +50,8 @@ export const summarizeNote = inngest.createFunction(
 
       console.log("notes", note);
 
+      const startTime = Date.now();
+
       const summary = await step.run("generate-summary", async () => {
         const model = genAI.getGenerativeModel({
           model: "gemini-flash-latest",
@@ -48,6 +60,32 @@ export const summarizeNote = inngest.createFunction(
         const result = await model.generateContent(
           `Summarize the following note in 2-3 clear bullet points:\n\n${note.content}`
         );
+
+        const latencyMs = Date.now() - startTime;
+        const usage = result.response.usageMetadata || {};
+
+        const promptTokens = usage.promptTokenCount || 0;
+        const completionTokens = usage.candidatesTokenCount || 0;
+
+        const cost = calculateCost({
+          model: "gemini-flash-latest",
+          promptTokens,
+          completionTokens,
+        });
+
+        await AiUsage.create({
+          userId: userId,
+          noteId: noteId || null,
+          feature: "note-summary",
+          aiMode: "direct",
+          operation: "generation",
+          model: "gemini-flash-latest",
+          promptToken: promptTokens,
+          completionToken: completionTokens,
+          totalTokens: promptTokens + completionTokens,
+          costUSD: cost.totalCost,
+          latencyMs,
+        });
 
         return result.response.text();
       });
@@ -87,6 +125,12 @@ export const processPdf = inngest.createFunction(
   },
   async ({ event, step }) => {
     const { noteId, userId, fileName, fileSize, pdfBuffer } = event.data;
+
+    const dailylimit = await checkDailyLimit(userId);
+
+    if (dailylimit >= 1) {
+      throw new Error("Daily Limit reached of AI");
+    }
 
     const { fullText, totalPages } = await step.run(
       "extract-pdf-text",
@@ -167,6 +211,9 @@ export const processPdf = inngest.createFunction(
         const BATCH_SIZE = 10; // Process 10 at a time
         let processedCount = 0;
 
+        let total_tokens = 0;
+        let totalLatency = 0;
+
         for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
           const batch = chunks.slice(i, i + BATCH_SIZE);
 
@@ -181,10 +228,20 @@ export const processPdf = inngest.createFunction(
             const chunkIndex = i + batchIdx;
 
             try {
+              const startTime = Date.now();
+
               const embeddingRes = await openai.embeddings.create({
                 model: "text-embedding-3-small",
                 input: chunk,
               });
+
+              const embeddingTokens =
+                embeddingRes.usage.total_tokens ??
+                embeddingRes.usage.prompt_tokens ??
+                0;
+
+              total_tokens += embeddingTokens;
+              totalLatency += Date.now() - startTime;
 
               return {
                 noteId,
@@ -216,6 +273,24 @@ export const processPdf = inngest.createFunction(
             await new Promise((resolve) => setTimeout(resolve, 200));
           }
         }
+        const cost = calculateCost({
+          model: "text-embedding-3-small",
+          promptTokens: total_tokens,
+        });
+
+        await AiUsage.create({
+          userId,
+          noteId,
+          feature: "pdf-upload",
+          aiMode: "rag",
+          operation: "embedding",
+          model: "text-embedding-3-small",
+          promptToken: total_tokens,
+          completionToken: 0,
+          totalTokens: total_tokens,
+          costUSD: cost.totalCost,
+          latencyMs: totalLatency,
+        });
 
         console.log("✅ All embeddings created successfully");
       } catch (error) {

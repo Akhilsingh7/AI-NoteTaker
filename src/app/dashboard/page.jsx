@@ -23,7 +23,7 @@ function Dashboard() {
     },
   });
 
-  console.log(data);
+  console.log("data is ", data);
 
   if (isLoading) return <p className="text-center py-8">Loading...</p>;
   if (error)
@@ -61,38 +61,45 @@ function Dashboard() {
         </div>
 
         {/* Notes List */}
-        <div className="space-y-4">
-          {data?.data?.map((note) => (
-            <Link
-              href={`/dashboard/note/${note._id}`}
-              className="block"
-              key={note._id}
-            >
-              <Card
-                key={note._id}
-                className="p-6 hover:shadow-md transition-shadow cursor-pointer bg-white"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      {note.title}
-                    </h3>
-                    {note?.source === "pdf" && (
-                      <span className="text-xs px-2 py-0.5 rounded bg-gray-100">
-                        📄 PDF
+
+        <div>
+          {data?.data && data?.data?.length == 0 ? (
+            <div>No notes are available please create notes</div>
+          ) : (
+            <div className="space-y-4">
+              {data?.data?.map((note) => (
+                <Link
+                  href={`/dashboard/note/${note._id}`}
+                  className="block"
+                  key={note._id}
+                >
+                  <Card
+                    key={note._id}
+                    className="p-6 hover:shadow-md transition-shadow cursor-pointer bg-white"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                          {note.title}
+                        </h3>
+                        {note?.source === "pdf" && (
+                          <span className="text-xs px-2 py-0.5 rounded bg-gray-100">
+                            📄 PDF
+                          </span>
+                        )}
+                        <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">
+                          {note.content}
+                        </p>
+                      </div>
+                      <span className="text-sm text-gray-400 ml-4 whitespace-nowrap">
+                        {format(new Date(note.updatedAt), "dd MMM yyyy")}
                       </span>
-                    )}
-                    <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">
-                      {note.content}
-                    </p>
-                  </div>
-                  <span className="text-sm text-gray-400 ml-4 whitespace-nowrap">
-                    {format(new Date(note.updatedAt), "dd MMM yyyy")}
-                  </span>
-                </div>
-              </Card>
-            </Link>
-          ))}
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

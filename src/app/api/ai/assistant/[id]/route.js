@@ -3,6 +3,8 @@ import dbConnect from "../../../../../backend/db";
 import Note from "../../../../../backend/models/notes";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { currentUser } from "@clerk/nextjs/server";
+import AiUsage from "../../../../../backend/models/AiUsage";
+import { calculateCost, checkDailyLimit } from "@/lib/calcAiCost";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
 
@@ -118,8 +120,19 @@ export async function POST(request, { params }) {
       );
     }
 
+    const dailylimit = await checkDailyLimit(user.id);
+
+    if (dailylimit >= 1) {
+      return NextResponse.json(
+        { success: false, message: "Daily AI usage limit reached" },
+        { status: 429 }
+      );
+    }
+
     const { id } = await params;
     console.log("Fetching note with ID:", id);
+
+    const startTime = Date.now();
 
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash-lite",
@@ -135,6 +148,8 @@ export async function POST(request, { params }) {
     let structuredData = null;
 
     const functionCall = response.functionCalls()?.[0];
+
+    const operation = functionCall ? "tool-call" : "generation";
 
     if (functionCall) {
       console.log("AI calling function:", functionCall.name);
@@ -191,12 +206,38 @@ export async function POST(request, { params }) {
 
     const answer = response.text();
 
+    const latencyMs = Date.now() - startTime;
+    const usage = response.usageMetadata || {};
+
+    const promptTokens = usage.promptTokenCount || 0;
+    const completionTokens = usage.candidatesTokenCount || 0;
+
+    const cost = calculateCost({
+      model: "gemini-2.5-flash-lite",
+      promptTokens,
+      completionTokens,
+    });
+
     if (!answer) {
       return NextResponse.json(
         { success: false, message: "Failed to answer question" },
         { status: 500 }
       );
     }
+
+    await AiUsage.create({
+      userId: user.id,
+      noteId: id || null,
+      feature: "smart-assistant",
+      aiMode: "agent",
+      operation,
+      model: "gemini-2.5-flash-lite",
+      promptToken: promptTokens,
+      completionToken: completionTokens,
+      totalTokens: promptTokens + completionTokens,
+      costUSD: cost.totalCost,
+      latencyMs,
+    });
 
     return NextResponse.json({
       success: true,

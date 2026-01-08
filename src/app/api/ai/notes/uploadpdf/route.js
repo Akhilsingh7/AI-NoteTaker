@@ -8,6 +8,7 @@ import { inngest } from "@/lib/inngest/client";
 import OpenAI from "openai";
 // import pdf from "pdf-parse";
 import { extractText } from "unpdf";
+import { checkDailyLimit } from "@/lib/calcAiCost";
 
 // ✅ FIX: Import pdf-parse correctly for Node.js
 
@@ -46,6 +47,15 @@ export async function POST(req) {
       return NextResponse.json(
         { error: "File too large (max 10MB)" },
         { status: 400 }
+      );
+    }
+
+    // Check daily AI usage limit before processing
+    const dailyLimit = await checkDailyLimit(user.id);
+    if (dailyLimit >= 1) {
+      return NextResponse.json(
+        { error: "Daily AI usage limit reached" },
+        { status: 429 }
       );
     }
 

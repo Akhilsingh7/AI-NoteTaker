@@ -4,6 +4,8 @@ import Note from "../../../../../backend/models/notes";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { currentUser } from "@clerk/nextjs/server";
 import ConversationMemory from "../../../../../backend/models/ConversationMemory";
+import AiUsage from "../../../../../backend/models/AiUsage";
+import { calculateCost, checkDailyLimit } from "@/lib/calcAiCost";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
 
@@ -96,6 +98,17 @@ export async function POST(request, { params }) {
       ${question}
       `;
 
+    const dailyLimit = await checkDailyLimit(user.id);
+
+    const startTime = Date.now();
+
+    if (dailyLimit >= 1) {
+      return NextResponse.json(
+        { success: false, message: "Daily AI usage limit reached" },
+        { status: 429 }
+      );
+    }
+
     const stream = await model.generateContentStream(prompt);
 
     const encoder = new TextEncoder();
@@ -111,7 +124,37 @@ export async function POST(request, { params }) {
               controller.enqueue(encoder.encode(text));
             }
           }
-          controller.close(); // ✅ FIX: Close the stream!
+          controller.close();
+          const latencyMs = Date.now() - startTime;
+          const usage = stream.response?.usageMetadata || {};
+
+          const promptTokens = usage.promptTokenCount || 0;
+          const completionTokens = usage.candidatesTokenCount || 0;
+
+          const cost = calculateCost({
+            model: "gemini-2.5-flash-lite",
+            promptTokens,
+            completionTokens,
+          });
+
+          await AiUsage.create({
+            userId: user.id,
+            noteId: id,
+
+            feature: "note-question",
+            aiMode: "direct",
+            operation: "generation",
+
+            model: "gemini-2.5-flash-lite",
+
+            promptToken: promptTokens,
+            completionToken: completionTokens,
+            totalTokens: promptTokens + completionTokens,
+
+            costUSD: cost.totalCost,
+            latencyMs,
+          });
+
           await ConversationMemory.create({
             userId: user.id,
             noteId: id,

@@ -4,6 +4,7 @@ import Note from "../../../../../backend/models/notes";
 import { currentUser } from "@clerk/nextjs/server";
 import { inngest } from "@/lib/inngest/client";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { checkDailyLimit } from "@/lib/calcAiCost";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
 
@@ -47,6 +48,15 @@ export async function POST(request, { params }) {
       return NextResponse.json(
         { success: false, message: "Note has no content to summarize" },
         { status: 400 }
+      );
+    }
+
+    const dailyLimit = await checkDailyLimit(user.id);
+
+    if (dailyLimit >= 1) {
+      return NextResponse.json(
+        { success: false, message: "Daily AI usage limit reached" },
+        { status: 429 }
       );
     }
 
