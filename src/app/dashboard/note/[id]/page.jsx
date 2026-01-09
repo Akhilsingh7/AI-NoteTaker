@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 function NoteDetail() {
   const { id } = useParams();
@@ -14,6 +15,8 @@ function NoteDetail() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+
+  const router = useRouter();
 
   // NEW: State for summary polling
   const [summaryStatus, setSummaryStatus] = useState("pending");
@@ -28,6 +31,37 @@ function NoteDetail() {
       return res.json();
     },
     enabled: !!id,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (type) => {
+      const res = await fetch(`/api/dashboard/note/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ noteType: type }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to delete note");
+      }
+
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.message || "Failed to delete note");
+      }
+
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["notes"] });
+      queryClient.invalidateQueries({ queryKey: ["note", id] });
+      toast.success(data.message || "Note deleted successfully");
+      router.push("/dashboard");
+    },
+    onError: (error) => {
+      toast.error("error in deleting note");
+      console.error(error.message);
+    },
   });
 
   useEffect(() => {
@@ -179,9 +213,21 @@ function NoteDetail() {
     <div className="min-h-screen bg-gray-50 px-6 py-8">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Title */}
-        <h1 className="text-4xl font-bold text-gray-900">
-          {data?.data?.title}
-        </h1>
+        <div className="flex justify-between">
+          <h1 className="text-4xl font-bold text-gray-900">
+            {data?.data?.title}
+          </h1>
+          <div>
+            <Button
+              size="default"
+              className="bg-red-400 hover:bg-red-500"
+              onClick={() => deleteMutation.mutate(data?.data?.source)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
+        </div>
 
         {data?.data?.source === "pdf" && (
           <span className="px-3 py-1 bg-red-100 text-red-700 text-sm font-semibold rounded-full">

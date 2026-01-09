@@ -129,8 +129,8 @@ export async function POST(request, { params }) {
       );
     }
 
-    const { id } = await params;
-    console.log("Fetching note with ID:", id);
+    // const { id } = await params;
+    // console.log("Fetching note with ID:", id);
 
     const startTime = Date.now();
 
@@ -202,9 +202,9 @@ export async function POST(request, { params }) {
       response = result.response;
     }
 
-    console.log("Function result22:", structuredData);
-
     const answer = response.text();
+
+    console.log("responseis", answer);
 
     const latencyMs = Date.now() - startTime;
     const usage = response.usageMetadata || {};
@@ -227,7 +227,7 @@ export async function POST(request, { params }) {
 
     await AiUsage.create({
       userId: user.id,
-      noteId: id || null,
+      noteId: null,
       feature: "smart-assistant",
       aiMode: "agent",
       operation,
@@ -239,11 +239,17 @@ export async function POST(request, { params }) {
       latencyMs,
     });
 
+    // console.log("data innn", data);
+    const cleanAnswer = answer
+      .replace(/<tool_code[^>]*>/g, "")
+      .replace(/<\/tool_code>/g, "")
+      .trim();
+
     return NextResponse.json({
       success: true,
       data: {
         functionCalled: responseType,
-        message: answer,
+        message: cleanAnswer,
         structuredData: structuredData,
       },
     });
