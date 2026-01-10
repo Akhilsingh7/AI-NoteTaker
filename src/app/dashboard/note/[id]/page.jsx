@@ -1,6 +1,7 @@
 "use client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
@@ -15,14 +16,16 @@ function NoteDetail() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
 
   const router = useRouter();
 
-  // NEW: State for summary polling
   const [summaryStatus, setSummaryStatus] = useState("pending");
   const [isPolling, setIsPolling] = useState(false);
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, isSuccess } = useQuery({
     queryKey: ["note", id],
     queryFn: async () => {
       const res = await fetch(`/api/dashboard/note/${id}`);
@@ -32,6 +35,13 @@ function NoteDetail() {
     },
     enabled: !!id,
   });
+
+  useEffect(() => {
+    if (isSuccess && data?.data) {
+      setTitle(data?.data?.title);
+      setContent(data?.data?.content);
+    }
+  }, [isSuccess, data?.data]);
 
   const deleteMutation = useMutation({
     mutationFn: async (type) => {
@@ -205,6 +215,57 @@ function NoteDetail() {
     alert("Answer saved! (Feature coming soon)");
   };
 
+  const handleEditing = (e) => {
+    setIsEditing(true);
+  };
+
+  const editMutation = useMutation({
+    mutationFn: async ({ title, content }) => {
+      const res = await fetch(`/api/dashboard/note/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update note");
+      }
+
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["note", id] });
+
+      toast.success(data.message || "Note updated successfully!");
+
+      setIsEditing(false);
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to update note");
+    },
+  });
+
+  const handleSave = () => {
+    if (!title.trim()) {
+      toast.error("Title cannot be empty");
+      return;
+    }
+
+    if (!content.trim()) {
+      toast.error("Content cannot be empty");
+      return;
+    }
+
+    if (title === data?.data?.title && content === data?.data?.content) {
+      toast.info("No changes detected");
+      setIsEditing(false);
+      return;
+    }
+
+    editMutation.mutate({ title, content });
+  };
+
   if (isLoading) return <p className="text-center py-8">Loading...</p>;
   if (error)
     return <p className="text-center py-8 text-red-600">Error loading Notes</p>;
@@ -213,16 +274,52 @@ function NoteDetail() {
     <div className="min-h-screen bg-gray-50 px-6 py-8">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Title */}
-        <div className="flex justify-between">
-          <h1 className="text-4xl font-bold text-gray-900">
-            {data?.data?.title}
-          </h1>
-          <div>
+        <div className={`flex justify-between ${isEditing && "gap-6"}`}>
+          {isEditing ? (
+            <Textarea
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="text-xl font-bold text-gray-600"
+              disabled={editMutation.isPending}
+            />
+          ) : (
+            <h1 className="text-4xl font-bold text-gray-900">{title}</h1>
+          )}
+
+          <div className=" flex gap-2">
+            {isEditing ? (
+              <Button
+                size="default"
+                className="bg-gray-400 hover:bg-gray-500"
+                onClick={handleSave}
+                disabled={editMutation.isPending}
+                // onClick={() => deleteMutation.mutate(data?.data?.source)}
+              >
+                {editMutation.isPending ? (
+                  <>
+                    <span className="animate-spin mr-2">⏳</span>
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            ) : (
+              <Button
+                size="default"
+                className="bg-gray-400 hover:bg-gray-500"
+                onClick={handleEditing}
+              >
+                Edit
+              </Button>
+            )}
+
             <Button
               size="default"
               className="bg-red-400 hover:bg-red-500"
               onClick={() => deleteMutation.mutate(data?.data?.source)}
-              disabled={deleteMutation.isPending}
+              disabled={isEditing || deleteMutation.isPending}
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete"}
             </Button>
@@ -237,9 +334,17 @@ function NoteDetail() {
 
         {/* Content */}
         <div>
-          <p className="text-gray-700 text-lg leading-relaxed">
-            {data?.data?.content}
-          </p>
+          {isEditing ? (
+            <Textarea
+              type="text"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="text-xl font-bold text-gray-600"
+              disabled={editMutation.isPending}
+            />
+          ) : (
+            <p className="text-gray-700 text-lg leading-relaxed">{content}</p>
+          )}
         </div>
 
         {/* AI Summary Section */}

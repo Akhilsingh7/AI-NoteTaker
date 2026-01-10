@@ -52,8 +52,8 @@ function CreateNote() {
   const handleFormData = (e) => {
     e.preventDefault();
     addMutation.mutate({
-      title: title,
-      content: content,
+      title: title.trim(),
+      content: content.trim(),
       userId: userId,
     });
   };

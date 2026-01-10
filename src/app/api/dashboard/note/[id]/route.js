@@ -6,6 +6,7 @@ import mongoose from "mongoose";
 import ConversationMemory from "../../../../../backend/models/ConversationMemory";
 import AiUsage from "../../../../../backend/models/AiUsage";
 import NoteChunk from "../../../../../backend/models/NoteChunk";
+import { title } from "process";
 
 export async function GET(request, { params }) {
   try {
@@ -114,6 +115,120 @@ export async function DELETE(request, { params }) {
       );
     }
   } catch (error) {
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request, { params }) {
+  try {
+    await dbConnect();
+
+    const { id } = await params;
+    const user = await currentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "you are not authorized to edit the note",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    const data = await request.json();
+
+    const title = data.title?.trim();
+    const content = data.content?.trim();
+
+    if (!title || title.length === 0) {
+      return NextResponse.json(
+        { success: false, message: "Title is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!content || content.length === 0) {
+      return NextResponse.json(
+        { success: false, message: "Content is required" },
+        { status: 400 }
+      );
+    }
+
+    if (title.length > 200) {
+      return NextResponse.json(
+        { success: false, message: "Title too long (max 200 characters)" },
+        { status: 400 }
+      );
+    }
+
+    const note = await Note.findById(id);
+
+    if (!note) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "No such note exist ",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    if (note.userId !== user.id) {
+      return NextResponse.json(
+        { success: false, message: "Forbidden: You don't own this note" },
+        { status: 403 }
+      );
+    }
+
+    const titleChanged = note.title !== title;
+    const contentChanged = note.content !== content;
+
+    // If nothing changed, return early
+    if (!titleChanged && !contentChanged) {
+      return NextResponse.json(
+        { success: true, message: "No changes detected" },
+        { status: 200 }
+      );
+    }
+
+    const updateData = {};
+
+    if (titleChanged) {
+      updateData.title = title;
+    }
+
+    if (contentChanged) {
+      updateData.content = content;
+      updateData.summary = null;
+      updateData.summaryStatus = "pending";
+    }
+
+    const updatedNote = await Note.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
+
+    if (contentChanged) {
+      await ConversationMemory.deleteMany({ noteId: id });
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Note updated successfully",
+        data: updatedNote,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error(" Error updating note:", error);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }

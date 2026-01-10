@@ -29,7 +29,6 @@ const NoteSchema = new mongoose.Schema(
       type: String,
       enum: ["pending", "processing", "embedding", "completed", "failed"],
       default: "completed", // Text notes start as "completed"
-      // Flow for PDFs: pending → processing → embedding → completed
     },
     source: {
       type: String,
