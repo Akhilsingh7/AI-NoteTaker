@@ -3,10 +3,17 @@ import { NextResponse } from "next/server";
 import Note from "@/backend/models/notes";
 import { auth } from "@clerk/nextjs/server";
 
-export async function GET() {
+export async function GET(request) {
   try {
     await dbConnect();
     const { userId } = await auth();
+
+    const { searchParams } = new URL(request.url);
+
+    const page = Number(searchParams.get("page") ?? 1);
+    const limit = Number(searchParams.get("limit") ?? 10);
+
+    const skip = (page - 1) * limit;
 
     console.log("user id is ", userId);
     if (!userId) {
@@ -16,11 +23,22 @@ export async function GET() {
       );
     }
 
-    const notes = await Note.find({ userId }).sort({ createdAt: -1 });
+    const notes = await Note.find({ userId })
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    const total = await Note.countDocuments({ userId: userId });
 
     console.log(notes);
 
-    return NextResponse.json({ success: true, data: notes });
+    return NextResponse.json({
+      success: true,
+      data: {
+        notes,
+        hasMore: page * limit < total,
+      },
+    });
   } catch (error) {
     console.error("API Error:", error);
 

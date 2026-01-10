@@ -1,29 +1,47 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Router from "next/router";
 import { format } from "date-fns";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
+import { useEffect } from "react";
 
 function Dashboard() {
-  const router = new useRouter();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { userId, isLoaded, isSignedIn } = useAuth();
 
-  const { data, isLoading, error } = useQuery({
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+    error,
+  } = useInfiniteQuery({
     queryKey: ["notes"],
-    queryFn: async () => {
-      const res = await fetch("/api/dashboard");
+    queryFn: async ({ pageParam = 1 }) => {
+      const res = await fetch(`/api/dashboard?page=${pageParam}`);
       if (res.status === 401) return { data: [] };
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json();
     },
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage?.data?.hasMore ? allPages.length + 1 : undefined;
+    },
   });
 
   console.log("data is ", data);
+
+  const notes = data?.pages.flatMap((page) => page.data.notes) ?? [];
 
   if (isLoading) return <p className="text-center py-8">Loading...</p>;
   if (error)
@@ -63,11 +81,11 @@ function Dashboard() {
         {/* Notes List */}
 
         <div>
-          {data?.data && data?.data?.length == 0 ? (
+          {!isLoading && notes.length === 0 ? (
             <div>No notes are available please create notes</div>
           ) : (
             <div className="space-y-4">
-              {data?.data?.map((note) => (
+              {notes.map((note) => (
                 <Link
                   href={`/dashboard/note/${note._id}`}
                   className="block"
@@ -99,6 +117,18 @@ function Dashboard() {
                 </Link>
               ))}
             </div>
+          )}
+        </div>
+
+        <div>
+          {hasNextPage && (
+            <Button
+              className="mt-4"
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+            >
+              {isFetchingNextPage ? "Loading..." : "Load More"}
+            </Button>
           )}
         </div>
       </div>
