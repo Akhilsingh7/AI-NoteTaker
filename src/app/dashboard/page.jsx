@@ -27,22 +27,20 @@ function Dashboard() {
     isError,
     error,
   } = useInfiniteQuery({
-    queryKey: ["notes"],
+    queryKey: ["notes-infinite"],
     queryFn: async ({ pageParam = 1 }) => {
       const res = await fetch(`/api/dashboard?page=${pageParam}`);
-      if (res.status === 401) return { data: [] };
+      if (res.status === 401) return { data: { notes: [], hasMore: false } };
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json();
     },
     getNextPageParam: (lastPage, allPages) => {
       return lastPage?.data?.hasMore ? allPages.length + 1 : undefined;
     },
+    initialPageParam: 1,
   });
 
-  console.log("data is ", data);
-
-  const notes = data?.pages.flatMap((page) => page.data.notes) ?? [];
-
+  const notes = data?.pages?.flatMap((page) => page?.data?.notes || []) ?? [];
   if (isLoading) return <p className="text-center py-8">Loading...</p>;
   if (error)
     return <p className="text-center py-8 text-red-600">Error loading Notes</p>;
@@ -81,7 +79,7 @@ function Dashboard() {
         {/* Notes List */}
 
         <div>
-          {!isLoading && notes.length === 0 ? (
+          {!isLoading && notes?.length === 0 ? (
             <div>No notes are available please create notes</div>
           ) : (
             <div className="space-y-4">
@@ -101,7 +99,7 @@ function Dashboard() {
                           {note.title}
                         </h3>
                         {note?.source === "pdf" && (
-                          <span className="text-xs px-2 py-0.5 rounded bg-gray-100">
+                          <span className="text-xs px-2 py-0.5 rounded  bg-red-100 text-red-700">
                             📄 PDF
                           </span>
                         )}

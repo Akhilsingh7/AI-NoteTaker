@@ -45,7 +45,7 @@ function SmartAssistant() {
   });
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["notes"],
+    queryKey: ["notes-default"],
     queryFn: async () => {
       const res = await fetch("/api/dashboard");
       if (res.status === 401) return { data: [] };
@@ -53,6 +53,8 @@ function SmartAssistant() {
       return res.json();
     },
   });
+
+  console.log("data is", data);
 
   if (isLoading) return <p className="text-center py-8">Loading...</p>;
   if (error)
@@ -67,7 +69,7 @@ function SmartAssistant() {
     <div className="min-h-screen bg-gray-50 px-6 py-8">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        {data?.data?.length > 0 ? (
+        {data?.data?.notes?.length > 0 ? (
           <Card className="bg-gray-50 border border-gray-200 p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 border-2 border-y-slate-500 rounded-full flex items-center justify-center text-2xl">

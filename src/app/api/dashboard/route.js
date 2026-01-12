@@ -9,11 +9,7 @@ export async function GET(request) {
     const { userId } = await auth();
 
     const { searchParams } = new URL(request.url);
-
-    const page = Number(searchParams.get("page") ?? 1);
-    const limit = Number(searchParams.get("limit") ?? 10);
-
-    const skip = (page - 1) * limit;
+    const page = Number(searchParams.get("page"));
 
     console.log("user id is ", userId);
     if (!userId) {
@@ -22,6 +18,20 @@ export async function GET(request) {
         { status: 401 }
       );
     }
+
+    if (!page) {
+      const notes = await Note.find({ userId })
+        .sort({ createdAt: -1 })
+        .limit(20);
+      return NextResponse.json({
+        success: true,
+        data: { notes },
+      });
+    }
+
+    const limit = Number(searchParams.get("limit") ?? 10);
+
+    const skip = (page - 1) * limit;
 
     const notes = await Note.find({ userId })
       .skip(skip)

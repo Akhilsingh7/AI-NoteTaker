@@ -8,6 +8,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import ReadMore from "../../../../component/ReadMore";
 
 function NoteDetail() {
   const { id } = useParams();
@@ -327,14 +328,14 @@ function NoteDetail() {
         </div>
 
         {data?.data?.source === "pdf" && (
-          <span className="px-3 py-1 bg-red-100 text-red-700 text-sm font-semibold rounded-full">
+          <span className="text-xs px-2 py-0.5 rounded  bg-red-100 text-red-700">
             PDF
           </span>
         )}
 
         {/* Content */}
         <div>
-          {isEditing ? (
+          {isEditing && data?.data?.source !== "pdf" ? (
             <Textarea
               type="text"
               value={content}
@@ -343,7 +344,9 @@ function NoteDetail() {
               disabled={editMutation.isPending}
             />
           ) : (
-            <p className="text-gray-700 text-lg leading-relaxed">{content}</p>
+            // <p className="text-gray-700 text-lg leading-relaxed">{content}</p>
+
+            <ReadMore text={content} max={300} />
           )}
         </div>
 
