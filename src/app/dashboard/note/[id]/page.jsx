@@ -272,27 +272,27 @@ function NoteDetail() {
     return <p className="text-center py-8 text-red-600">Error loading Notes</p>;
 
   return (
-    <div className="min-h-screen bg-gray-50 px-6 py-8">
+    <div className="min-h-screen bg-gray-50 px-4 sm:px-6 py-8">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Title */}
-        <div className={`flex justify-between ${isEditing && "gap-6"}`}>
+        <div className={`flex flex-col sm:flex-row justify-between gap-3 ${isEditing && "sm:gap-6"}`}>
           {isEditing ? (
             <Textarea
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="text-xl font-bold text-gray-600"
+              className="text-lg sm:text-xl font-bold text-gray-600"
               disabled={editMutation.isPending}
             />
           ) : (
-            <h1 className="text-4xl font-bold text-gray-900">{title}</h1>
+            <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">{title}</h1>
           )}
 
-          <div className=" flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {isEditing ? (
               <Button
                 size="default"
-                className="bg-gray-400 hover:bg-gray-500"
+                className="bg-gray-400 hover:bg-gray-500 flex-1 sm:flex-none"
                 onClick={handleSave}
                 disabled={editMutation.isPending}
                 // onClick={() => deleteMutation.mutate(data?.data?.source)}
@@ -309,7 +309,7 @@ function NoteDetail() {
             ) : (
               <Button
                 size="default"
-                className="bg-gray-400 hover:bg-gray-500"
+                className="bg-gray-400 hover:bg-gray-500 flex-1 sm:flex-none"
                 onClick={handleEditing}
               >
                 Edit
@@ -318,7 +318,7 @@ function NoteDetail() {
 
             <Button
               size="default"
-              className="bg-red-400 hover:bg-red-500"
+              className="bg-red-400 hover:bg-red-500 flex-1 sm:flex-none"
               onClick={() => deleteMutation.mutate(data?.data?.source)}
               disabled={isEditing || deleteMutation.isPending}
             >
@@ -351,8 +351,8 @@ function NoteDetail() {
         </div>
 
         {/* AI Summary Section */}
-        <Card className="bg-gray-50 border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
+        <Card className="bg-gray-50 border border-gray-200 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
                 <svg
@@ -369,14 +369,14 @@ function NoteDetail() {
                   />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">AI Summary</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">AI Summary</h2>
             </div>
 
             {/* UPDATED: Button shows different states */}
             <Button
               onClick={() => aiMutation.mutate(id)}
               disabled={aiMutation.isPending || summaryStatus === "processing"}
-              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 w-full sm:w-auto"
             >
               {aiMutation.isPending ? (
                 <>
@@ -394,7 +394,7 @@ function NoteDetail() {
             </Button>
           </div>
 
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
+          <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200">
             {/* UPDATED: Show processing state */}
             {summaryStatus === "processing" && (
               <div className="flex flex-col items-center justify-center py-8">
@@ -447,7 +447,7 @@ function NoteDetail() {
         </Card>
 
         {/* Ask About This Note Section */}
-        <Card className="bg-gray-50 border border-gray-200 p-6">
+        <Card className="bg-gray-50 border border-gray-200 p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
               <svg
@@ -464,14 +464,14 @@ function NoteDetail() {
                 />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
               Ask About This Note
             </h2>
           </div>
 
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
+          <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200">
             {/* Question Input */}
-            <div className="flex gap-3 mb-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4">
               <Input
                 type="text"
                 placeholder="Ask about this note..."
@@ -480,12 +480,12 @@ function NoteDetail() {
                 onKeyPress={(e) =>
                   e.key === "Enter" && handleAskQuestion(data?.data?.source)
                 }
-                className="flex-1"
+                className="flex-1 w-full"
               />
               <Button
                 onClick={() => handleAskQuestion(data?.data?.source)}
                 disabled={isStreaming || !question.trim()}
-                className="bg-purple-600 hover:bg-purple-700"
+                className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto"
               >
                 {isStreaming ? "Thinking..." : "Ask"}
               </Button>

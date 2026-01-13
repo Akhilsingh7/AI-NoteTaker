@@ -66,23 +66,23 @@ function SmartAssistant() {
 
   // const answer = "abibfjkaslcvd;vdsvnsvk,vdsvdvsdvsdvdsvd";
   return (
-    <div className="min-h-screen bg-gray-50 px-6 py-8">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gray-50 px-4 sm:px-6 py-8">
+      <div className="max-w-full sm:max-w-2xl mx-auto">
         {/* Header */}
         {data?.data?.notes?.length > 0 ? (
-          <Card className="bg-gray-50 border border-gray-200 p-6">
+          <Card className="bg-gray-50 border border-gray-200 p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 border-2 border-y-slate-500 rounded-full flex items-center justify-center text-2xl">
                 🧠
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
                 Smart Note Assistant
               </h2>
             </div>
 
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
+            <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200">
               {/* Question Input */}
-              <div className="flex gap-3 mb-4">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4">
                 <Input
                   type="text"
                   placeholder="Lets have fun..."
@@ -90,12 +90,12 @@ function SmartAssistant() {
                   onChange={(e) => setQuestion(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && handleAskQuestion()}
                   disabled={questionMutation.isPending}
-                  className="flex-1"
+                  className="flex-1 w-full"
                 />
                 <Button
                   onClick={handleAskQuestion}
                   disabled={!question.trim() || questionMutation.isPending}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
                 >
                   {questionMutation.isPending ? "Asking..." : "Ask"}
                 </Button>

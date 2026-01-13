@@ -59,16 +59,16 @@ function CreateNote() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 px-6 py-8">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gray-50 px-4 sm:px-6 py-8">
+      <div className="max-w-full sm:max-w-2xl mx-auto">
         {/* Header */}
-        <div className="bg-gray-800 text-white px-6 py-4 rounded-t-lg">
-          <h1 className="text-2xl font-semibold">Create a New Note</h1>
+        <div className="bg-gray-800 text-white px-4 sm:px-6 py-4 rounded-t-lg">
+          <h1 className="text-xl sm:text-2xl font-semibold">Create a New Note</h1>
         </div>
 
         {/* Form */}
         <form onSubmit={handleFormData}>
-          <div className="bg-white p-6 rounded-b-lg shadow-sm">
+          <div className="bg-white p-4 sm:p-6 rounded-b-lg shadow-sm">
             {/* Title Field */}
             <div className="mb-6">
               <Label

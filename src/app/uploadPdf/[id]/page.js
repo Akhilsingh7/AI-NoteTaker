@@ -130,8 +130,8 @@ export default function UploadPdf() {
   }
 
   return (
-    <div className="max-w-xl mx-auto p-6">
-      <h1 className="text-2xl font-semibold mb-4">Upload PDF Notes</h1>
+    <div className="max-w-full sm:max-w-xl mx-auto p-4 sm:p-6">
+      <h1 className="text-xl sm:text-2xl font-semibold mb-4">Upload PDF Notes</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -167,21 +167,21 @@ export default function UploadPdf() {
 
       {/* Error Message */}
       {error && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded">
-          <p className="text-red-600">❌ {error}</p>
+        <div className="mt-4 p-3 sm:p-4 bg-red-50 border border-red-200 rounded">
+          <p className="text-red-600 text-sm sm:text-base">❌ {error}</p>
         </div>
       )}
 
       {/* Success Message */}
       {success && (
-        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
-          <p className="text-green-600">{success}</p>
+        <div className="mt-4 p-3 sm:p-4 bg-green-50 border border-green-200 rounded">
+          <p className="text-green-600 text-sm sm:text-base">{success}</p>
         </div>
       )}
 
       {/* Processing Status */}
       {isProcessing && (
-        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
+        <div className="mt-4 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded">
           <div className="flex items-center gap-3">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
             <div>

@@ -2,14 +2,14 @@ import HomeLogin from "../component/HomeLogin";
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-8">
-      <div className="max-w-4xl w-full flex items-center justify-between gap-12">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 sm:p-8">
+      <div className="max-w-4xl w-full flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-12">
         {/* Left Content */}
-        <div className="flex-1">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+        <div className="flex-1 text-center lg:text-left">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Welcome to AI Smart Notes
           </h1>
-          <p className="text-gray-600 text-lg mb-8">
+          <p className="text-gray-600 text-base sm:text-lg mb-8">
             Organize your notes and get AI-powered answers.
           </p>
           <HomeLogin></HomeLogin>
@@ -17,7 +17,7 @@ export default function Home() {
 
         {/* Right Image/Illustration */}
         <div className="flex-1 flex justify-center">
-          <div className="relative">
+          <div className="relative scale-75 sm:scale-90 lg:scale-100">
             {/* AI Character Illustration */}
             <div className="w-64 h-64 bg-gradient-to-br from-yellow-300 to-yellow-400 rounded-full flex items-center justify-center relative">
               {/* Hard Hat */}

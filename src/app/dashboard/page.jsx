@@ -49,26 +49,26 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Notes</h1>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">My Notes</h1>
 
-          <div className="flex items-center justify-between gap-2">
-            <Link href={`/uploadPdf/${userId ?? ""}`}>
-              <Button variant="outline" size="default" disabled={!userId}>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <Link href={`/uploadPdf/${userId ?? ""}`} className="flex-1 sm:flex-none">
+              <Button variant="outline" size="default" disabled={!userId} className="w-full sm:w-auto">
                 ➜ Upload-Pdf
               </Button>
             </Link>
 
-            <Link href={`/dashboard/assistant/${userId ?? ""}`}>
-              <Button variant="outline" size="default" disabled={!userId}>
+            <Link href={`/dashboard/assistant/${userId ?? ""}`} className="flex-1 sm:flex-none">
+              <Button variant="outline" size="default" disabled={!userId} className="w-full sm:w-auto">
                 🧠 ASSISTANT
               </Button>
             </Link>
 
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 flex-1 sm:flex-none w-full sm:w-auto"
               onClick={() => router.push("/dashboard/new")}
             >
               New Note
@@ -91,11 +91,11 @@ function Dashboard() {
                 >
                   <Card
                     key={note._id}
-                    className="p-6 hover:shadow-md transition-shadow cursor-pointer bg-white"
+                    className="p-4 sm:p-6 hover:shadow-md transition-shadow cursor-pointer bg-white"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
+                      <div className="flex-1 w-full">
+                        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
                           {note.title}
                         </h3>
                         {note?.source === "pdf" && (
@@ -107,7 +107,7 @@ function Dashboard() {
                           {note.content}
                         </p>
                       </div>
-                      <span className="text-sm text-gray-400 ml-4 whitespace-nowrap">
+                      <span className="text-xs sm:text-sm text-gray-400 sm:ml-4 whitespace-nowrap">
                         {format(new Date(note.updatedAt), "dd MMM yyyy")}
                       </span>
                     </div>
