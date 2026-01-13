@@ -101,15 +101,6 @@ function SmartAssistant() {
                 </Button>
               </div>
 
-              {/* Answer Display */}
-              {/* {answer && (
-              <div className="mt-4">
-                <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                  <p className="text-gray-700 mb-3">{answer}</p>
-                </div>
-              </div>
-            )} */}
-
               <div className="relative">
                 {questionMutation.isPending && (
                   <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10 rounded-lg">
